@@ -236,10 +236,7 @@ export class ClientTwitch extends EventEmitter {
             if (!found) { this.sendMessage(`Couldn't find the command that you tried to use ${event.username}...`); }
         }
 
-        this.sendMessage = function(message) {
-            sleep(this.chat_delay);
-            if (!this.chat_silence) { this._backend.say(message).catch(err => { log.error(err, `${SOURCE}-${this._settings.name}`); }); }
-        }
+        this.sendMessage = function(message) { sleep(this.chat_delay); if (!this.chat_silence) { this._backend.say(message).catch(err => { log.error(err, `${SOURCE}-${this._settings.name}`); }); } }
 
         this.getSystem = function(system) {
             const find = system.toLowerCase();
