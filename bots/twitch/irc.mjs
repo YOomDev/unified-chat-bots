@@ -152,8 +152,6 @@ export class TwitchIRC extends EventEmitter {
             this.emit(EventTypes.message, { username: nickname, identity: ident, host: host, channel: chan, message: message, tags: tags, privileges: privileges });
             return;
         }
-
-        //log.info(`Response not handled: ${line}`, SOURCE);
     }
 
     parseTags(raw) {
