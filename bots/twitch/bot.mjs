@@ -31,6 +31,9 @@ export class ClientTwitch extends EventEmitter {
         this._supers = [];
         this._ignore = [];
         this.prefix = '!';
+        this.chat_show = false;
+        this.chat_delay = 0;
+        this.chat_silence = false;
         this.channel = '';
 
         this.connect = async function() {
@@ -63,9 +66,12 @@ export class ClientTwitch extends EventEmitter {
                 this.channel = this._settings.settings.channel;
                 this.api = new TwitchAPI(this._settings.secrets.token, this.channel, this._settings.secrets.id);
                 this._backend = new TwitchIRC({ username: this._settings.settings.username, oauth: this._settings.secrets.token, channel: this.channel } );
-                if ('prefix'     in this._settings.settings) { if (this._settings.settings.prefix.length > 0) { this.prefix = this._settings.settings.prefix; } }
-                if ('superusers' in this._settings.settings) { this._supers = this._settings.settings.superusers; }
-                if ('usersIgnore' in this._settings.settings) { this._ignore = this._settings.settings.usersIgnore; }
+                if ('prefix'       in this._settings.settings) { if (this._settings.settings.prefix.length > 0) { this.prefix = this._settings.settings.prefix; } }
+                if ('chat_show'    in this._settings.settings) { this.chat_show = this._settings.settings.chat_show; }
+                if ('chat_delay'   in this._settings.settings) { this.chat_delay = this._settings.settings.chat_delay; }
+                if ('chat_silence' in this._settings.settings) { this.chat_silence = this._settings.settings.chat_silence; }
+                if ('superusers'   in this._settings.settings) { this._supers = this._settings.settings.superusers; }
+                if ('usersIgnore'  in this._settings.settings) { this._ignore = this._settings.settings.usersIgnore; }
                 this._setupEvents();
                 await this._setupSystems();
                 this._loadCommands().catch(err => { log.error(err, `${SOURCE}-${this._settings.name}`); });
@@ -85,6 +91,7 @@ export class ClientTwitch extends EventEmitter {
             this._backend.addListener(EventTypes._botuserstate, event => { log.info(`Obtained user-id: ${event.userId}`, `${SOURCE}-${this._settings.name}`); if (this.api) { this.api._data.userId = event.userId; } });
             this._backend.addListener(EventTypes.message      , event => {
                 for (let i = 0;i < this._ignore.length; i++) { if (equals(this._ignore[i], event.identity)) { return; } } // Ignore messages from certain users
+                if (this.chat_show) { log.info(`[${event.channel}] ${event.username}: ${event.message}`, SOURCE); }
                 if (event.message.startsWith(this.prefix)) {
                     this.emit(EventTypes.command, event);
                     this._parseCommand(event).catch(err => {
@@ -226,10 +233,13 @@ export class ClientTwitch extends EventEmitter {
                     break;
                 }
             }
-            if (!found) { this.sendMessage(`Couldn't find the command that you tried to use ${event.username}...`); }
+            if (!found && !this.chat_silence) { this.sendMessage(`Couldn't find the command that you tried to use ${event.username}...`); }
         }
 
-        this.sendMessage = function(message) { this._backend.say(message).catch(err => { log.error(err, `${SOURCE}-${this._settings.name}`); }); }
+        this.sendMessage = function(message) {
+            sleep(this.chat_delay);
+            this._backend.say(message).catch(err => { log.error(err, `${SOURCE}-${this._settings.name}`); });
+        }
 
         this.getSystem = function(system) {
             const find = system.toLowerCase();
