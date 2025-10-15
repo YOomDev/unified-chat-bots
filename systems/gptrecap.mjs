@@ -44,13 +44,13 @@ export default {
             }
             this.data[event.channel].userMessageCount[event.username] = this.data[event.channel].userMessageCount[event.username].filter(time => currentTime - time < this.message_time_window);
             if (this.data[event.channel].userMessageCount[event.username].length >= this.message_limit_per_user) {
-                log.warn(`User ${event.username} exceeded message limit.`, 'gptrecap.mjs');
+                log.warn(`User ${event.username} exceeded message limit on #${event.channel}.`, 'gptrecap.mjs');
                 return;
             }
             this.data[event.channel].userMessageCount[event.username].push(currentTime);
             if (this.data[event.channel].chatMessages.length >= this.max_messages) {
                 this.data[event.channel].chatMessages.shift();
-                log.warn(`User ${event.username} exceeded max messages limit. shifting.`, 'gptrecap.mjs');
+                log.warn(`User ${event.username} exceeded max messages limit on #${event.channel}. shifting.`, 'gptrecap.mjs');
             }
             this.data[event.channel].chatMessages.push(`${event.username}: ${event.message}`);
         });
