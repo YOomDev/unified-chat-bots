@@ -233,12 +233,12 @@ export class ClientTwitch extends EventEmitter {
                     break;
                 }
             }
-            if (!found && !this.chat_silence) { this.sendMessage(`Couldn't find the command that you tried to use ${event.username}...`); }
+            if (!found) { this.sendMessage(`Couldn't find the command that you tried to use ${event.username}...`); }
         }
 
         this.sendMessage = function(message) {
             sleep(this.chat_delay);
-            this._backend.say(message).catch(err => { log.error(err, `${SOURCE}-${this._settings.name}`); });
+            if (!this.chat_silence) { this._backend.say(message).catch(err => { log.error(err, `${SOURCE}-${this._settings.name}`); }); }
         }
 
         this.getSystem = function(system) {
