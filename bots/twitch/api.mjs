@@ -45,7 +45,7 @@ export class TwitchAPI extends EventEmitter {
 
         if (!this.isReady()) { log.error('Missing data for getAllFollowerData to request the needed data from twitch!', SOURCE); }
         else {
-            log.info('Started loading follower data', SOURCE);
+            log.info('Started loading follower data', `${SOURCE}-${this._data.channel}`);
             let pagination = '';
             let done = false;
             while (!done) {
@@ -64,7 +64,7 @@ export class TwitchAPI extends EventEmitter {
                     r.on('data', data => { parseData += data; });
                     r.on('end', _ => {
                         const json = JSON.parse(parseData);
-                        if (json === undefined) { log.warn('Failed to parse follower data:', SOURCE); log.data(parseData, SOURCE); done = true; return; }
+                        if (json === undefined) { log.warn('Failed to parse follower data:', `${SOURCE}-${this._data.channel}`); log.data(parseData, `${SOURCE}-${this._data.channel}`); done = true; return; }
                         if (json.status) { if (json.status === 401) { log.error('Token expired!'); done = true; return; } }
                         if (!('cursor' in json.pagination)) { done = true; }
                         const next = `${json.pagination.cursor}`.toString();
@@ -82,7 +82,7 @@ export class TwitchAPI extends EventEmitter {
             }
         }
 
-        log.info('Finished loading follower data', SOURCE);
+        log.info('Finished loading follower data', `${SOURCE}-${this._data.channel}`);
         return followers;
     }
 
