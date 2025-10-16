@@ -106,8 +106,7 @@ export class ClientTwitch extends EventEmitter {
                 log.info('Waiting till api has all the data it needs before loading systems...', `${SOURCE}-${this._settings.name}-systems`);
                 while (!this.api.isReady()) { await sleep(0.5); }
             }
-
-            log.info('Started loading systems', `${SOURCE}-${this._settings.name}`);
+            log.info('Started loading systems', `${SOURCE}-${this._settings.settings.channel}-${this._settings.name}`);
             this._systems.slice(0, this._systems.length);
             const folder = new URL('../../systems', import.meta.url);
             const systemFiles = fs.readdirSync(folder).filter(file => file.endsWith('.mjs'));
