@@ -53,7 +53,7 @@ export class TwitchIRC extends EventEmitter {
         this.ws = new WebSocket(url);
 
         this.ws.addEventListener('open', () => {
-            log.info('Connected to Twitch IRC', SOURCE);
+            log.info('Connected to Twitch IRC', `${SOURCE}-${this.channel}`);
             this.ws.send(`CAP REQ :twitch.tv/tags twitch.tv/commands`); // this.ws.send(`CAP REQ :twitch.tv/membership twitch.tv/tags twitch.tv/commands`);
             this.ws.send(`PASS ${this.oauth}`);
             this.ws.send(`NICK ${this.username}`);
@@ -74,7 +74,7 @@ export class TwitchIRC extends EventEmitter {
 
     async say(message) {
         if (!message || !message.toString().trim().length) {
-            log.warn('Message could not be sent, no message was passed or it was only whitespace', SOURCE);
+            log.warn('Message could not be sent, no message was passed or it was only whitespace', `${SOURCE}-${this.channel}`);
             return;
         }
         let msgs = message.toString().trim().split('\n');
@@ -106,7 +106,7 @@ export class TwitchIRC extends EventEmitter {
         while (next && next.length === 0 && this.messageQueue.length > 0) { next = this.messageQueue.shift(); }
         if (!next) return;
 
-        log.info(`[${this.channel}] ${this.username}: ${next}`, SOURCE);
+        log.info(`[${this.channel}] ${this.username}: ${next}`, `${SOURCE}-${this.channel}`);
         this.send(`PRIVMSG #${this.channel} :${next}`);
         this.messagesInPeriod++;
 
@@ -190,10 +190,10 @@ export class TwitchIRC extends EventEmitter {
         };
     }
 
-    handleError(error) { log.error(`WS error: ${error}`, SOURCE); }
+    handleError(error) { log.error(`WS error: ${error}`, `${SOURCE}-${this.channel}`); }
 
     handleClose(code, reason) {
-        log.warn(`WS closed (code=${code} reason=${reason}). Reconnecting...`, SOURCE);
+        log.warn(`WS closed (code=${code} reason=${reason}). Reconnecting...`, `${SOURCE}-${this.channel}`);
         this.reconnect();
     }
 
