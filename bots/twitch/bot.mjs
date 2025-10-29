@@ -86,16 +86,16 @@ export class ClientTwitch extends EventEmitter {
             // api
             this.api.addListener('error', err => { log.error(err, `${SOURCE}-API`); });
             this.api.addListener('token_refreshed', data => {
-                this._settings.secrets.usertoken = data.token;
+                this._settings.secrets.usertoken = data.usertoken;
                 if (data.refresh) { this._settings.secrets.refresh = data.refresh; }
                 if (data.expiry) { this._settings.secrets.expiry = data.expiry; }
-                this._backend.usertoken = `oauth:${data.token}`;
+                this._backend.usertoken = `oauth:${data.usertoken}`;
                 const configPath = path.join(process.cwd(), 'configs', 'secrets.json');
                 try {
                     const currentSettings = json.load(configPath);
                     const botIndex = currentSettings.twitch.findIndex(b => b.name === this._settings.name);
                     if (botIndex !== -1) {
-                        currentSettings.twitch[botIndex].secrets.usertoken = data.token;
+                        currentSettings.twitch[botIndex].secrets.usertoken = data.usertoken;
                         if (data.refresh) { currentSettings.twitch[botIndex].secrets.refresh = data.refresh; }
                         if (data.expiry) { currentSettings.twitch[botIndex].secrets.expiry = data.expiry; }
                         fs.writeFileSync(configPath, JSON.stringify(currentSettings, null, 2));

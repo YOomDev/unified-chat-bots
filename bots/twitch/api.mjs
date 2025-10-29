@@ -47,7 +47,7 @@ export class TwitchAPI extends EventEmitter {
         this._data.token = data.access_token;
         if (data.refresh_token) { this._data.refresh = data.refresh_token; }
         if (data.expires_in) { this._data.tokenExpiry = Date.now() + (data.expires_in * 1000); }
-        this.emit('token_refreshed', { token: this._data.token, refresh: this._data.refresh, expiry: this._data.tokenExpiry });
+        this.emit('token_refreshed', { token: this._data.usertoken, refresh: this._data.refresh, expiry: this._data.tokenExpiry });
         return this._data.token;
     }
 
