@@ -21,6 +21,7 @@ export default {
     init(client) {
         const config = client.getSystemConfig(this.name);
         if ('model'                  in config) { this.model  = config.model; }
+        // TODO: Re-add this logic
         // Obsolete for now - Might re-add this logic later, if the basics work as intended - Keeping for now
         if ('max_messages'           in config) { this.max_messages  = config.max_messages; }
         if ('message_limit_per_user' in config) { this.message_limit_per_user  = config.message_limit_per_user; }
