@@ -113,7 +113,7 @@ export class WebConsole {
         const possible = [];
         for (let i = 0; i < keys.length; i++) {
             const key = keys[i].toLowerCase();
-            if (!(equals(key, 'secret') || equals(key, 'secrets') || equals(key, 'token') || equals(key, 'tokens') || equals(key, 'client') || equals(key, 'oauth')
+            if (!(equals(key, 'secret') || equals(key, 'secrets') || equals(key, 'token') || equals(key, 'refresh') || equals(key, 'tokens') || equals(key, 'client') || equals(key, 'oauth')
                 || equals(key, '_events') || equals(key, '_eventsCount') || equals(key, '_maxListeners') || equals(key, 'ws')
                 || equals(typeof obj[key], 'function') || equals(typeof obj[key], 'undefined'))) {
                 possible.push(keys[i]);
