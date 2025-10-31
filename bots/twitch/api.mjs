@@ -13,15 +13,18 @@ export class TwitchAPI extends EventEmitter {
         roomId: 0,
         applicationId: 0,
         channel: 0,
+        usertoken: "",
+        refresh: "",
         tokenExpiry: 0,
     }
 
-    constructor(token, channel, id, secret, refresh, expiry = 0) {
+    constructor(token, channel, id, secret, usertoken, refresh, expiry = 0) {
         super();
         this._data.token = token;
         this._data.channel = channel;
         this._data.applicationId = id;
         this._data.secret = secret;
+        this._data.usertoken = usertoken;
         this._data.refresh = refresh;
         this._data.tokenExpiry = expiry;
     }
@@ -29,9 +32,7 @@ export class TwitchAPI extends EventEmitter {
     isReady() { return !(this._data.token === 0 || this._data.roomId === 0 || this._data.channel === 0 || this._data.applicationId === 0); }
 
     async refreshToken() {
-        if (!this._data.refresh || !this._data.secret || !this._data.applicationId) {
-            throw new Error('Missing refresh token, client secret, or client ID for refresh');
-        }
+        if (!this._data.refresh || !this._data.secret || !this._data.applicationId) { throw new Error('Missing refresh token, client secret, or client ID for refresh'); }
         const response = await fetch('https://id.twitch.tv/oauth2/token', {
             method: 'POST',
             headers: {
@@ -45,60 +46,24 @@ export class TwitchAPI extends EventEmitter {
             }),
         });
         const data = await response.json();
-        if (!response.ok) {
-            throw new Error(`Token refresh failed: ${data.message}`);
-        }
-        this._data.token = data.access_token;
-        if (data.refresh_token) {
-            this._data.refresh = data.refresh_token;
-        }
-        if (data.expires_in) {
-            this._data.tokenExpiry = Date.now() + (data.expires_in * 1000);
-        }
-        // Emit event or something to update config
-        this.emit('token_refreshed', { token: this._data.token, refresh: this._data.refresh, expiry: this._data.tokenExpiry });
-        return this._data.token;
-    }
-
-    async ensureValidToken() {
-        if (this._data.tokenExpiry && Date.now() >= this._data.tokenExpiry) {
-            await this.refreshToken();
-        }
+        if (!response.ok) { throw new Error(`Token refresh failed: ${data.message}`); }
+        if (data.refresh_token) { this._data.refresh = data.refresh_token; }
+        if (data.expires_in) { this._data.tokenExpiry = Date.now() + (data.expires_in * 1000); }
+        this.emit('token_refreshed', { usertoken: data.access_token, refresh: this._data.refresh, expiry: this._data.tokenExpiry });
     }
 
     startAutoRefresh() {
-        if (!this._data.refresh) {
-            log.info('No refresh token available, skipping auto-refresh', `${SOURCE}-${this._data.channel}`);
-            return;
-        }
-        if (this._refreshTimeout) {
-            clearTimeout(this._refreshTimeout);
-        }
+        if (!this._data.refresh) { log.info('No refresh token available, skipping auto-refresh', `${SOURCE}-${this._data.channel}`); return; }
+        if (this._refreshTimeout) { clearTimeout(this._refreshTimeout); }
         this._scheduleNextRefresh();
         log.info('Auto-refresh started', `${SOURCE}-${this._data.channel}`);
     }
 
     _scheduleNextRefresh() {
-        if (!this._data.tokenExpiry) {
-            // Fallback to 3 hours if no expiry
-            const intervalMs = 3 * 60 * 60 * 1000;
-            this._refreshTimeout = setTimeout(() => {
-                this.refreshToken().then(() => this._scheduleNextRefresh()).catch(err => {
-                    log.error(`Auto-refresh failed: ${err.message}`, SOURCE);
-                    this._scheduleNextRefresh(); // Retry
-                });
-            }, intervalMs);
-            return;
-        }
-        const bufferMs = 5 * 60 * 1000; // 5 minutes buffer
+        const bufferMs = 5 * 60 * 1000;
         const timeUntilExpiry = this._data.tokenExpiry - Date.now() - bufferMs;
-        const intervalMs = Math.max(1000, timeUntilExpiry); // At least 1 second
-        this._refreshTimeout = setTimeout(() => {
-            this.refreshToken().then(() => this._scheduleNextRefresh()).catch(err => {
-                log.error(`Auto-refresh failed: ${err.message}`, SOURCE);
-                this._scheduleNextRefresh(); // Retry
-            });
-        }, intervalMs);
+        const intervalMs = Math.max(1000, timeUntilExpiry);
+        this._refreshTimeout = setTimeout(() => { this.refreshToken().then(() => this._scheduleNextRefresh()).catch(err => { log.error(`Auto-refresh failed: ${err.message}`, SOURCE); this._scheduleNextRefresh(); }); }, intervalMs);
     }
 
     // Token is expected to have: moderator:manage:chat_messages

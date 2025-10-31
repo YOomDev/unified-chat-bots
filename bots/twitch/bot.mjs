@@ -67,7 +67,7 @@ export class ClientTwitch extends EventEmitter {
             if (!valid) { log.warn('Couldn\'t start bot!', SOURCE); }
             else {
                 this.channel = this._settings.settings.channel;
-                this.api = new TwitchAPI(this._settings.secrets.token, this.channel, this._settings.secrets.id);
+                this.api = new TwitchAPI(this._settings.secrets.token, this.channel, this._settings.secrets.id, this._settings.secrets.secret, this._settings.secrets.usertoken, this._settings.secrets.refresh, this._settings.secrets.expiry);
                 this._backend = new TwitchIRC({ username: this._settings.settings.username, oauth: this._settings.secrets.token, channel: this.channel } );
                 if ('prefix'       in this._settings.settings) { if (this._settings.settings.prefix.length > 0) { this.prefix = this._settings.settings.prefix; } }
                 if ('chat_show'    in this._settings.settings) { this.chat_show = this._settings.settings.chat_show; }
@@ -86,28 +86,18 @@ export class ClientTwitch extends EventEmitter {
             // api
             this.api.addListener('error', err => { log.error(err, `${SOURCE}-API`); });
             this.api.addListener('token_refreshed', data => {
-                this._settings.secrets.token = data.token;
-                if (data.refresh) {
-                    this._settings.secrets.refresh = data.refresh;
-                }
-                if (data.expiry) {
-                    this._settings.secrets.expiry = data.expiry;
-                }
-                this._backend.usertoken = `oauth:${data.token}`;
-                // Persist to file - note: this assumes the settings object is shared, but in practice, may need manual update
+                if (data.usertoken) { this._settings.secrets.usertoken = data.usertoken; this.api._data.usertoken = data.usertoken; }
+                if (data.refresh) { this._settings.secrets.refresh = data.refresh; this.api._data.refresh = data.refresh; }
+                if (data.expiry) { this._settings.secrets.expiry = data.expiry; this.api._data.tokenExpiry = data.expiry; }
+                this.api.startAutoRefresh();
                 const configPath = path.join(process.cwd(), 'configs', 'secrets.json');
                 try {
-                    // Load current settings, update this bot, save
                     const currentSettings = json.load(configPath);
                     const botIndex = currentSettings.twitch.findIndex(b => b.name === this._settings.name);
                     if (botIndex !== -1) {
-                        currentSettings.twitch[botIndex].secrets.usertoken = data.token;
-                        if (data.refresh) {
-                            currentSettings.twitch[botIndex].secrets.refresh = data.refresh;
-                        }
-                        if (data.expiry) {
-                            currentSettings.twitch[botIndex].secrets.expiry = data.expiry;
-                        }
+                        if (data.usertoken) { currentSettings.twitch[botIndex].secrets.usertoken = data.usertoken; }
+                        if (data.refresh) { currentSettings.twitch[botIndex].secrets.refresh = data.refresh; }
+                        if (data.expiry) { currentSettings.twitch[botIndex].secrets.expiry = data.expiry; }
                         fs.writeFileSync(configPath, JSON.stringify(currentSettings, null, 2));
                         log.info('Tokens updated in secrets.json', `${SOURCE}-${this._settings.name}`);
                     } else {

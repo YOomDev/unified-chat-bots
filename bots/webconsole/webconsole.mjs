@@ -1,4 +1,5 @@
 import { equals, log } from '../../utils.mjs';
+import { EventEmitter } from 'node:events';
 import express from 'express';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -8,13 +9,15 @@ const MAX_DEPTH = 20;
 
 const app = express();
 
-export class WebConsole {
+export class WebConsole extends EventEmitter {
     getTwitch = 0;
     getDiscord = 0;
     port = 0;
     settings = {};
 
     constructor(functorTwitch, functorDiscord, settings) {
+        super();
+
         this.getTwitch  = functorTwitch;
         this.getDiscord = functorDiscord;
         this.settings = settings;
@@ -31,8 +34,9 @@ export class WebConsole {
             return;
         }
         app.get('/', (req, res) => {
-            // Only allow localhost to view
-            if (!req.ip.startsWith('::ffff:') || !req.ip === '127.0.0.1') return res.status(403).send('Access denied');
+            const clientIP = req.ip || req.connection.remoteAddress;
+            if (clientIP !== '127.0.0.1' && clientIP !== '::1' && clientIP !== '::ffff:127.0.0.1') { return res.status(403).send('Access denied'); }
+
             let nav = '';
             let data = '';
             const twitch = this.getTwitch();
@@ -55,35 +59,22 @@ export class WebConsole {
         // OAuth routes for Twitch accessible for everyone
         app.get('/oauth/twitch/:index', (req, res) => {
             const index = parseInt(req.params.index);
-            if (isNaN(index) || index < 0 || index >= this.settings.twitch.length) {
-                return res.status(400).send('Invalid bot index');
-            }
+            if (isNaN(index) || index < 0 || index >= this.settings.twitch.length) { return res.status(400).send('Invalid bot index'); }
             const bot = this.settings.twitch[index];
-            if (!bot.secrets.secret) {
-                return res.status(400).send('Client secret not configured for this bot');
-            }
-            const clientId = bot.secrets.id;
+            if (!bot.secrets.secret) { return res.status(400).send('Client secret not configured for this bot'); }
             const redirectUri = bot.secrets.redirectUri || `http://localhost:${this.port}/oauth/callback`;
-            // Default scopes to basic if not filled in
             const scope = bot.secrets.scopes || 'chat:read chat:edit channel:moderate';
             const state = index.toString();
-            const authUrl = `https://id.twitch.tv/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}&state=${state}`;
+            const authUrl = `https://id.twitch.tv/oauth2/authorize?client_id=${bot.secrets.id}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}&state=${state}`;
             res.redirect(authUrl);
         });
         app.get('/oauth/callback', async (req, res) => {
             const { code, state, error } = req.query;
-            if (error) {
-                return res.status(400).send(`OAuth error: ${error}`);
-            }
+            if (error) { return res.status(400).send(`OAuth error: ${error}`); }
             const index = parseInt(state);
-            if (isNaN(index) || index < 0 || index >= this.settings.twitch.length) {
-                return res.status(400).send('Invalid state');
-            }
+            if (isNaN(index) || index < 0 || index >= this.settings.twitch.length) { return res.status(400).send('Invalid state'); }
             const bot = this.settings.twitch[index];
-            const clientId = bot.secrets.id;
-            const clientSecret = bot.secrets.secret;
             const redirectUri = bot.secrets.redirectUri || `http://localhost:${this.port}/oauth/callback`;
-
             try {
                 const response = await fetch('https://id.twitch.tv/oauth2/token', {
                     method: 'POST',
@@ -91,28 +82,18 @@ export class WebConsole {
                         'Content-Type': 'application/x-www-form-urlencoded',
                     },
                     body: new URLSearchParams({
-                        client_id: clientId,
-                        client_secret: clientSecret,
+                        client_id: bot.secrets.id,
+                        client_secret: bot.secrets.secret,
                         code: code,
                         grant_type: 'authorization_code',
                         redirect_uri: redirectUri,
                     }),
                 });
                 const data = await response.json();
-                if (!response.ok) {
-                    return res.status(400).send(`Token exchange failed: ${data.message}`);
-                }
-                // Update settings
-                bot.secrets.token = data.access_token;
-                if (data.refresh_token) {
-                    bot.secrets.refresh = data.refresh_token;
-                }
-                if (data.expires_in) {
-                    bot.secrets.expiry = Date.now() + (data.expires_in * 1000);
-                }
-                // Save to file
-                const configPath = path.join(process.cwd(), 'configs', 'secrets.json');
-                fs.writeFileSync(configPath, JSON.stringify(this.settings, null, 2));
+                if (!response.ok) { return res.status(400).send(`Token exchange failed: ${data.message}`); }
+                log.info(`OAuth callback successful for ${bot.settings.username}`, SOURCE);
+                const clients = this.getTwitch();
+                clients[index].api.emit('token_refreshed', { usertoken: data.access_token, refresh: data.refresh_token, expiry: Date.now() + (data.expires_in * 1000) });
                 res.send('OAuth successful! Tokens updated. You can close this window.');
             } catch (err) {
                 log.error(err, SOURCE);
@@ -133,7 +114,7 @@ export class WebConsole {
         const possible = [];
         for (let i = 0; i < keys.length; i++) {
             const key = keys[i].toLowerCase();
-            if (!(equals(key, 'secret') || equals(key, 'secrets') || equals(key, 'token') || equals(key, 'tokens') || equals(key, 'client') || equals(key, 'oauth')
+            if (!(equals(key, 'secret') || equals(key, 'secrets') || equals(key, 'token') || equals(key, 'refresh') || equals(key, 'tokens') || equals(key, 'client') || equals(key, 'oauth')
                 || equals(key, '_events') || equals(key, '_eventsCount') || equals(key, '_maxListeners') || equals(key, 'ws')
                 || equals(typeof obj[key], 'function') || equals(typeof obj[key], 'undefined'))) {
                 possible.push(keys[i]);
