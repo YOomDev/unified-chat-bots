@@ -8,7 +8,6 @@ import { TwitchAPI } from './api.mjs';
 const SOURCE = 'Twitch';
 
 // TODO: Aliases overwrite each other, make it known that they are
-// TODO: If we multiline, add (x/X) before so we know its line 1 of 3 etc.
 
 const systemProperties = ['name']
 const commandProperties = ['name', 'reply'];

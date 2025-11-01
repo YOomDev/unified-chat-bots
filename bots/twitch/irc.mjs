@@ -74,23 +74,18 @@ export class TwitchIRC extends EventEmitter {
     }
 
     async say(message) {
-        if (!message || !message.toString().trim().length) {
-            log.warn('Message could not be sent, no message was passed or it was only whitespace', SOURCE);
-            return;
-        }
+        if (!message || !message.toString().trim().length) { log.warn('Message could not be sent, no message was passed or it was only whitespace', SOURCE); return; }
         let msgs = message.toString().trim().split('\n');
-        for (let i = 0; i < msgs.length; i++) {
-            let msg = msgs[i].trim();
-            if (msg.length < 1) { continue; }
-            while (msg.length >= 500) {
-                let space = 499; // find last space before 500 mark
-                for (let j = 499; j > 0; j--) {
-                    if (msg[j] === ' ') { space = j; break; }
-                }
-                this.messageQueue.push(msg.substring(0, space));
-                msg = msg.substring(space, msg.length);
-            }
-            this.messageQueue.push(msg);
+        let filteredMsgs = msgs.map(m => m.trim()).filter(m => m.length > 0);
+        let allParts = [];
+        for (let msg of filteredMsgs) {
+            while (msg.length >= 500) { let space = 499; for (let j = 499; j > 0; j--) { if (msg[j] === ' ') { space = j; break; } } allParts.push(msg.substring(0, space)); msg = msg.substring(space); }
+            allParts.push(msg);
+        }
+        if (allParts.length > 1) {
+            for (let k = 0; k < allParts.length; k++) { this.messageQueue.push(`(${k + 1}/${allParts.length}) ${allParts[k]}`); }
+        } else {
+            for (let part of allParts) { this.messageQueue.push(part); }
         }
         this.flushQueue();
     }
