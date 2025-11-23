@@ -8,11 +8,7 @@ export default {
     name: 'gptimage',
     systems: ['gptimage'],
     async reply(params, client, event) {
-        if (event.privileges.super       ||
-            event.privileges.broadcaster ||
-            event.privileges.moderator   ||
-            event.privileges.vip         ||
-            event.privileges.subscriber) {
+        if (event.privileges.super || event.privileges.broadcaster || event.privileges.moderator || event.privileges.vip || event.privileges.subscriber) {
             if (params.length > 0) {
                 try {
                     const system = client.getSystem('gptimage');
@@ -39,6 +35,6 @@ export default {
                     client.sendMessage(`Something went wrong trying to get a response from the GPT ${event.username}.`);
                 }
             } else { client.sendMessage('You need to specify a where the image is, either live image or from a url.'); }
-            } else { client.sendMessage(`You need to be at least a subscriber to use this command ${event.username}.`); }
+        } else { client.sendMessage(`You need to be at least a subscriber to use this command ${event.username}.`); }
     }
 }

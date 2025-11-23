@@ -4,9 +4,7 @@ const SOURCE = 'gptrecap.mjs';
 
 const system_prompt =   'Tone: Playful and joyful\n' +
                         'Recapitulation: Summarize key points or highlights from previous interactions\n' +
-                        //'Recapitulation: Go for engagement, include as much chatters as possible\n' +
                         'Recapitulation: Go for engagement, include all persons at least once\n' +
-                        // 'Recapitulation: Go for engagement, include as much people/persons as possible\n' + ??
                         'Recapitulation: As short and concise as possible.';
 
 export default {
@@ -14,9 +12,7 @@ export default {
     systems: ['gptrecap'],
     aliases: ['tldr'],
     async reply(params, client, event) {
-        if (event.privileges.super       ||
-            event.privileges.broadcaster ||
-            event.privileges.moderator) {
+        if (event.privileges.super || event.privileges.broadcaster || event.privileges.moderator) {
             try {
                 const system = client.getSystem('gptrecap');
                 const channelData = system.data[client.channel];

@@ -8,11 +8,7 @@ export default {
     name: 'gpt',
     systems: ['gpt'],
     async reply(params, client, event) {
-        if (event.privileges.super       ||
-            event.privileges.broadcaster ||
-            event.privileges.moderator   ||
-            event.privileges.subscriber  ||
-            event.privileges.vip) {
+        if (event.privileges.super || event.privileges.broadcaster || event.privileges.moderator || event.privileges.subscriber || event.privileges.vip) {
             if (params.length > 0) {
                 try {
                     const system = client.getSystem('gpt');

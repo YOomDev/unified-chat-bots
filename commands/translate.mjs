@@ -3,7 +3,6 @@ import { concat, log } from '../utils.mjs';
 const SOURCE = 'translate.mjs';
 
 const system_prompt =   'Translate the following stream chat message into English. Assume the original text is in an unknown language. ' +
-                        // 'Be as short and concise as possible' +
                         'Prioritize maintaining the original meaning, *and crucially, attempt to preserve any humorous intent or tone*. ' +
                         'If the message contains idioms, proverbs, or common sayings, translate them with their closest English equivalents. ' +
                         'If there\'s no direct equivalent, convey the intended humorous meaning as accurately as possible. The message is typically under 500 characters long. ' +
@@ -13,9 +12,7 @@ export default {
     name: 'translate',
     systems: ['gpt'],
     async reply(params, client, event) {
-        if (event.privileges.super       ||
-            event.privileges.broadcaster ||
-            event.privileges.moderator) {
+        if (event.privileges.super || event.privileges.broadcaster || event.privileges.moderator) {
             if (params.length > 0) {
                 try {
                     const system = client.getSystem('gpt');

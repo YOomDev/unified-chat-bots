@@ -10,8 +10,8 @@ const SOURCE = 'Twitch';
 const systemProperties = ['name'];
 const commandProperties = ['name', 'reply'];
 const neededSettings = [
-    'secrets.token',
-    'secrets.id',
+    'secrets.appToken',
+    'secrets.clientId',
     'settings.username',
     'settings.channel',
     'name'
@@ -65,8 +65,9 @@ export class ClientTwitch extends EventEmitter {
             if (!valid) { log.warn('Couldn\'t start bot!', SOURCE); }
             else {
                 this.channel = this._settings.settings.channel;
-                this.api = new TwitchAPI(this._settings.secrets.token, this.channel, this._settings.secrets.id, this._settings.secrets.secret, this._settings.secrets.usertoken, this._settings.secrets.refresh, this._settings.secrets.expiry);
-                this._backend = new TwitchIRC({ username: this._settings.settings.username, oauth: this._settings.secrets.token, channel: this.channel, chat_show: this._settings.settings.chat_show } );
+                this.api = new TwitchAPI(this._settings.secrets.appToken, this.channel, this._settings.secrets.clientId, this._settings.secrets.clientSecret, this._settings.secrets.botToken, this._settings.secrets.botRefresh, this._settings.secrets.botExpiry, this._settings.secrets.broadcasterToken, this._settings.secrets.broadcasterRefresh, this._settings.secrets.broadcasterExpiry);
+                const ircToken = this._settings.settings.ircTokenSource === 'bot' ? this._settings.secrets.botToken : this._settings.secrets.appToken;
+                this._backend = new TwitchIRC({ username: this._settings.settings.username, oauth: ircToken, channel: this.channel, chat_show: this._settings.settings.chat_show });
                 if ('prefix'           in this._settings.settings) { if (this._settings.settings.prefix.length > 0) { this.prefix = this._settings.settings.prefix; } }
                 if ('chat_show'        in this._settings.settings) { this.chat_show = this._settings.settings.chat_show; }
                 if ('chat_delay'       in this._settings.settings) { this.chat_delay = this._settings.settings.chat_delay; }
@@ -77,7 +78,7 @@ export class ClientTwitch extends EventEmitter {
                 this._setupEvents();
                 await this._setupSystems();
                 // Call after Systems are ready.
-                if ('token_refresh' in this._settings.settings && this._settings.settings.token_refresh) { this.api.startAutoRefresh(); }
+                if ('token_refresh' in this._settings.settings && this._settings.settings.token_refresh) { this.api.startAutoRefresh(); if (this._settings.secrets.broadcasterRefresh) { this.api.startAutoRefresh('broadcaster'); } }
                 if ('eventsub' in this._settings.settings && this._settings.settings.eventsub) { this.api.startEventSub(); }
                 this._loadCommands().catch(err => { log.error(err, `${SOURCE}-${this._settings.name}`); });
             }
@@ -87,18 +88,28 @@ export class ClientTwitch extends EventEmitter {
             // api
             this.api.addListener('error', err => { log.error(err, `${SOURCE}-API`); });
             this.api.addListener('token_refreshed', data => {
-                if (data.usertoken) { this._settings.secrets.usertoken = data.usertoken; this.api._data.usertoken = data.usertoken; if (this.api.eventsub) this.api.eventsub.updateToken(data.usertoken); }
-                if (data.refresh) { this._settings.secrets.refresh = data.refresh; this.api._data.refresh = data.refresh; }
-                if (data.expiry) { this._settings.secrets.expiry = data.expiry; this.api._data.tokenExpiry = data.expiry; }
-                this.api.startAutoRefresh();
+                const isBroadcaster = data.type === 'broadcaster';
+                const tokenType = isBroadcaster ? 'broadcaster' : 'bot';
+                const tokenKey = isBroadcaster ? 'broadcasterToken' : 'botToken';
+                const refreshKey = isBroadcaster ? 'broadcasterRefresh' : 'botRefresh';
+                const expiryKey = isBroadcaster ? 'broadcasterExpiry' : 'botExpiry';
+                if (data.token) {
+                    this._settings.secrets[tokenKey] = data.token;
+                    this.api._data[tokenKey] = data.token;
+                    if (!isBroadcaster && this.api.eventsub) this.api.eventsub.updateToken(data.token);
+                    if (!isBroadcaster && this._settings.settings.ircTokenSource === 'bot') this._backend.oauth = `oauth:${data.token}`;
+                }
+                if (data.refresh) { this._settings.secrets[refreshKey] = data.refresh; this.api._data[refreshKey] = data.refresh; }
+                if (data.expiry) { this._settings.secrets[expiryKey] = data.expiry; this.api._data[isBroadcaster ? 'broadcasterTokenExpiry' : 'botTokenExpiry'] = data.expiry; }
+                this.api.startAutoRefresh(tokenType);
                 const configPath = path.join(process.cwd(), 'configs', 'secrets.json');
                 try {
                     const currentSettings = json.load(configPath);
                     const botIndex = currentSettings.twitch.findIndex(b => b.name === this._settings.name);
                     if (botIndex !== -1) {
-                        if (data.usertoken) { currentSettings.twitch[botIndex].secrets.usertoken = data.usertoken; }
-                        if (data.refresh) { currentSettings.twitch[botIndex].secrets.refresh = data.refresh; }
-                        if (data.expiry) { currentSettings.twitch[botIndex].secrets.expiry = data.expiry; }
+                        if (data.token) { currentSettings.twitch[botIndex].secrets[tokenKey] = data.token; }
+                        if (data.refresh) { currentSettings.twitch[botIndex].secrets[refreshKey] = data.refresh; }
+                        if (data.expiry) { currentSettings.twitch[botIndex].secrets[expiryKey] = data.expiry; }
                         fs.writeFileSync(configPath, JSON.stringify(currentSettings, null, 2));
                     } else {
                         log.warn('Could not find bot in settings to update tokens', `${SOURCE}-${this._settings.name}`);
@@ -277,7 +288,7 @@ export class ClientTwitch extends EventEmitter {
                     event.privileges.super = isSuper;
 
                     // Check if command requires live stream
-                    if (!this.commandsOffline.includes(commandName) && !this.getSystem('channelLive').isLive(this.channel)) { return; }
+                    if (!this.commandsOffline.includes(command.name) && !this.getSystem('channelLive').isLive(this.channel)) { return; }
 
                     command.reply(params, this, event).catch(error => { // Command pass-through
                         log.error(error, `${SOURCE}-command-${command.name.toLowerCase()}`);

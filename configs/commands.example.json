@@ -1,5 +1,11 @@
 {
   "discord": {
     "secrets.json.bot.config.name": "command.response.goes.here"
+  },
+  "shoutout": {
+    "secrets.json.bot.config.name": {
+      "streamingMessage": "BIG SHOUTOUT TO @{username}, they are currently streaming in the {lastplayed} category @ https://www.twitch.tv/{username}",
+      "offlineMessage": "BIG SHOUTOUT TO @{username}, {lastplayed} @ https://www.twitch.tv/{username}"
+    }
   }
 }

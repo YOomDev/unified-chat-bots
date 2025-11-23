@@ -1,10 +1,7 @@
 export default {
     name: 'clip',
     async reply(params, client, event) {
-        if (!event.privileges.broadcaster && !event.privileges.moderator) {
-            client.sendMessage('You need to be a broadcaster or moderator to create a clip!');
-            return;
-        }
+        if (!event.privileges.broadcaster && !event.privileges.moderator) { client.sendMessage('You need to be a broadcaster or moderator to create a clip!'); return; }
         try {
             const clipData = await client.api.createClip(client.api._data.roomId, false);
             if (clipData && clipData.id) {

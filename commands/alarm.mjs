@@ -4,10 +4,7 @@ export default {
     name: 'alarm',
     aliases: ['timer'],
     async reply(params, client, event) {
-        if (!event.privileges.moderator && !event.privileges.broadcaster && !event.privileges.super) {
-            client.sendMessage('You need to be a moderator or higher to use this command!');
-            return;
-        }
+        if (!event.privileges.moderator && !event.privileges.broadcaster && !event.privileges.super) { client.sendMessage('You need to be a moderator or higher to use this command!'); return; }
         if (params.length < 2) { client.sendMessage('Not enough arguments to run this command!'); return; }
         const name = params[0];
         const minutes = parseInt(params[1]);

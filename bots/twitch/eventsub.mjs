@@ -5,9 +5,9 @@ import { log } from '../../utils.mjs';
 const SOURCE = 'Twitch-EventSub';
 
 export class TwitchEventSub extends EventEmitter {
-    constructor(usertoken, clientId, channel) {
+    constructor(botToken, clientId, channel) {
         super();
-        this.usertoken = usertoken;
+        this.botToken = botToken;
         this.clientId = clientId;
         this.ws = null;
         this.sessionId = null;
@@ -40,9 +40,6 @@ export class TwitchEventSub extends EventEmitter {
                 log.info('EventSub session reconnect requested', `${SOURCE}-${this.channel}`);
                 this.sessionId = message.payload.session.id;
                 this.ws.close();
-            case 'revocation':
-                // Revoked Moderator or VIP?
-                // TODO: Investigate what we get.
                 break;
             case 'notification':
                 this.handleNotification(message.payload);
@@ -68,8 +65,9 @@ export class TwitchEventSub extends EventEmitter {
     }
 
     updateToken(newToken) {
-        this.usertoken = newToken;
-        if (this.ws && this.ws.readyState === WebSocket.OPEN) { this.ws.close(); }
+        this.botToken = newToken;
+        // lets wait it out and see if twitch sends us RECONNECT
+        // if (this.ws && this.ws.readyState === WebSocket.OPEN) { this.ws.close(); }
     }
 
     async subscribe(type, version, condition) {
@@ -77,7 +75,7 @@ export class TwitchEventSub extends EventEmitter {
         const response = await fetch('https://api.twitch.tv/helix/eventsub/subscriptions', {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${this.usertoken}`,
+                'Authorization': `Bearer ${this.botToken}`,
                 'Client-Id': this.clientId,
                 'Content-Type': 'application/json'
             },
