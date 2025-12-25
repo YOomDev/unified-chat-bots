@@ -4,9 +4,9 @@ export default {
         if (event.privileges.super || event.privileges.broadcaster || event.privileges.moderator) {
             if (params.length === 0) { client.sendMessage('Usage: !obs stats | !obs reconnect | !obs record start/stop | !obs stream start/stop'); return; }
             const subcommand = params.shift().toLowerCase();
-            if (!client.obsClients || client.obsClients.length === 0) { client.sendMessage('OBS not connected.'); return; }
+            if (!client.obsClient) { client.sendMessage('OBS not configured for this channel.'); return; }
 
-            const getObsClient = () => { const obsClient = client.obsClients.find(c => c._settings.name === client._settings.name); return obsClient || client.obsClients[0]; };
+            const getObsClient = () => client.obsClient;
 
             if (subcommand === 'stats') {
                 const obsClient = getObsClient();

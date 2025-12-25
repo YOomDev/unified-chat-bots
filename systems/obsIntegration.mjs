@@ -1,4 +1,5 @@
 import { log } from '../utils.mjs';
+import { EventTypes } from '../bots/twitch/irc.mjs';
 
 const SOURCE = 'OBS-Integration';
 
@@ -19,11 +20,18 @@ export default {
             if (!integration.event || !integration.actions || !Array.isArray(integration.actions)) { log.warn(`Invalid integration configuration: ${JSON.stringify(integration)}`, `${SOURCE}-${client._settings.name}`); continue; }
             client.on(integration.event, async (event) => { await this.handleEvent(client, integration, event); });
         }
+
+        // Auto-connect OBS when stream goes live
+        const liveSystem = client.getSystem('channelLive');
+        if (liveSystem.isLive(client.channel)) { this.connectObsClient(client); }
+        client.api.addListener(EventTypes.stream_start, () => { this.connectObsClient(client); });
+        client.api.addListener(EventTypes.stream_end, () => { this.disconnectObsClient(client); });
+
         log.info(`OBS Integration loaded with ${this.integrations.length} integrations`, `${SOURCE}-${client._settings.name}`);
     },
 
     async handleEvent(client, integration, event) {
-        if (!client.obsClients || client.obsClients.length === 0) { return; }
+        if (!client.obsClient) { return; }
 
         // Cache current scene for this event batch to avoid multiple OBS calls
         let currentSceneCache = null;
@@ -42,7 +50,7 @@ export default {
             '{sourceName}': event.sourceName || '',
             '{delay}': event.delay || 0,
             '{duration}': event.duration || 0
-        };
+         }
         for (let key in action) { if (typeof action[key] === 'string') { action[key] = action[key].replace(/{user_name}|{user_login}|{display_name}|{viewer_count}|{sourceName}|{delay}|{duration}/g, match => placeholders[match]); } }
         // Convert numeric placeholders to numbers
         if (typeof action.delay === 'string') action.delay = parseInt(action.delay) || 0;
@@ -53,10 +61,8 @@ export default {
         // Replace placeholders in action fields
         this.replaceActionPlaceholders(action, event);
 
-        const obsName = action.obsName;
-        if (!obsName) { throw new Error('obsName required for action'); }
-        const obsClient = client.obsClients.find(c => c._settings.name === obsName);
-        if (!obsClient) { throw new Error(`OBS client with name '${obsName}' not found`); }
+        const obsClient = client.obsClient;
+        if (!obsClient) { throw new Error('No OBS client configured for this channel'); }
 
         switch (action.type) {
             case 'changeScene':
@@ -71,7 +77,7 @@ export default {
                 const delay = action.delay || 0;
                 setTimeout(async () => {
                     try { await obsClient.setSourceEnabled(sceneName, action.sourceName, enabled, duration); }
-                    catch (error) { log.error(`Failed to execute delayed setSourceEnabled: ${error.message}`, `${SOURCE}-${client._settings.name}`); }
+                     catch (error) { log.error(`Failed to execute delayed setSourceEnabled: ${error.message}`, `${SOURCE}-${client._settings.name}`); }
                 }, delay * 1000);
                 break;
             case 'setTextSource':
@@ -99,6 +105,24 @@ export default {
                 break;
             default:
                 throw new Error(`Unknown action type: ${action.type}`);
+        }
+    },
+
+    connectObsClient(client) {
+        if (!client.obsClient) { return; }
+        const obsClient = client.obsClient;
+        if (!obsClient.connected) {
+            try { obsClient.connect(); log.info('Auto-connected OBS client due to live stream', `${SOURCE}-${client._settings.name}`); }
+            catch (error) { log.error(`Failed to auto-connect OBS client: ${error}`, `${SOURCE}-${client._settings.name}`); }
+        }
+    },
+
+    disconnectObsClient(client) {
+        if (!client.obsClient) { return; }
+        const obsClient = client.obsClient;
+        if (obsClient.connected) {
+            try { obsClient.disconnect(); log.info('Auto-disconnected OBS client due to stream end', `${SOURCE}-${client._settings.name}`); }
+            catch (error) { log.error(`Failed to auto-disconnect OBS client: ${error}`, `${SOURCE}-${client._settings.name}`); }
         }
     }
 }

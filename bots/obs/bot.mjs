@@ -14,10 +14,11 @@ export class ClientOBS extends EventEmitter {
         this.reconnecting = false;
         this.retryDelay = 1000;
         this.maxRetryDelay = 30000;
+        this.intentionalDisconnect = false;
 
         // Set up event listeners once
         this.obs.on('ConnectionOpened', () => this.emit('connect'));
-        this.obs.on('ConnectionClosed', () => { this.connected = false; this.emit('disconnect'); this.reconnect(); });
+        this.obs.on('ConnectionClosed', () => { this.connected = false; this.emit('disconnect'); if (!this.intentionalDisconnect) { this.reconnect(); } });
         this.obs.on('ConnectionError', () => this.reconnect());
         this.obs.on('CurrentSceneChanged', (data) => this.emit('sceneChanged', data));
         this.obs.on('RecordingStarted', () => this.emit('recordingStarted'));
@@ -27,7 +28,7 @@ export class ClientOBS extends EventEmitter {
 
     // Connection methods
     async connect() {
-        try { const { host = 'localhost', port = 4455, password } = this._settings.settings || {}; await Promise.race([ this.obs.connect(`ws://${host}:${port}`, password), new Promise((_, reject) => setTimeout(() => reject(new Error('Connection timeout after 1 second')), 1000)) ]); this.connected = true; this.emit('ready'); log.info('Connected to OBS', `${SOURCE}-${this._settings.name}`); }
+        try { const { host = 'localhost', port = 4455, password } = this._settings.obs.settings || {}; await Promise.race([ this.obs.connect(`ws://${host}:${port}`, password), new Promise((_, reject) => setTimeout(() => reject(new Error('Connection timeout after 1 seconds')), 1000)) ]); this.connected = true; this.emit('ready'); }
         catch (error) { log.error(`Failed to connect to OBS: ${error}`, `${SOURCE}-${this._settings.name}`); this.reconnect(); }
     }
 
@@ -194,7 +195,7 @@ export class ClientOBS extends EventEmitter {
     // Disconnect method
     async disconnect() {
         log.info('Disconnecting OBS client...', `${SOURCE}-${this._settings.name}`);
-        try { this.reconnecting = true; if (this.connected && this.obs) { await this.obs.disconnect(); this.connected = false; } log.info('OBS client disconnected successfully', `${SOURCE}-${this._settings.name}`); }
-        catch (error) { log.error(`Error during OBS client disconnect: ${error}`, `${SOURCE}-${this._settings.name}`); throw error; }
+        try { this.intentionalDisconnect = true; if (this.connected && this.obs) { await this.obs.disconnect(); this.connected = false; } this.intentionalDisconnect = false; log.info('OBS client disconnected successfully', `${SOURCE}-${this._settings.name}`); }
+        catch (error) { log.error(`Error during OBS client disconnect: ${error}`, `${SOURCE}-${this._settings.name}`); this.intentionalDisconnect = false; throw error; }
     }
 }

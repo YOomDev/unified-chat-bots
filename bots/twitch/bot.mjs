@@ -21,11 +21,11 @@ const configSystem = json.load('./configs/systems.json');
 const configCommand = json.load('./configs/commands.json');
 
 export class ClientTwitch extends EventEmitter {
-    constructor(settingsJSON, obsClients = []) {
+    constructor(settingsJSON, obsClient = null) {
         super();
 
         this._settings = settingsJSON;
-        this.obsClients = obsClients;
+        this.obsClient = obsClient;
         this._backend = null;
         this._commands = [];
         this._systems = [];
@@ -151,9 +151,11 @@ export class ClientTwitch extends EventEmitter {
             this._systems.slice(0, this._systems.length);
             const folder = new URL('../../systems', import.meta.url);
             const systemFiles = fs.readdirSync(folder).filter(file => file.endsWith('.mjs'));
-            for (const file of systemFiles) {
-                const filePath = path.join(folder.toString(), file);
-                let system = (await import(filePath) .catch(err => { log.error(err, `${SOURCE}-Systems-${this._settings.name}`); }).then(_ => { return _; })).default;
+             for (const file of systemFiles) {
+                 const filePath = path.join(folder.toString(), file);
+                 let system;
+                 try { system = (await import(filePath)).default; }
+                 catch (err) { log.error(err, `${SOURCE}-Systems-${this._settings.name}`); continue; }
 
                 // Check if system has needed properties
                 let failed = false;
@@ -194,9 +196,11 @@ export class ClientTwitch extends EventEmitter {
             const usedNames = new Set();
             const folder = new URL('../../commands', import.meta.url);
             const commandFiles = fs.readdirSync(folder).filter(file => file.endsWith('.mjs'));
-            for (const file of commandFiles) {
-                const filePath = path.join(folder.toString(), file);
-                let command = (await import(filePath) .catch(err => { log.error(err, `${SOURCE}-Commands-${this._settings.name}`); }).then(_ => { return _; })).default;
+             for (const file of commandFiles) {
+                 const filePath = path.join(folder.toString(), file);
+                 let command;
+                 try { command = (await import(filePath)).default; }
+                 catch (err) { log.error(err, `${SOURCE}-Commands-${this._settings.name}`); continue; }
 
                 // Check if command has all the needed properties
                 let failed = false;

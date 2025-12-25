@@ -7,7 +7,6 @@ const SOURCE = 'MAIN';
 
 const clientsDiscord = [];
 const clientsTwitch = [];
-const clientsOBS = [];
 let webConsole;
 let readyPromises = [];
 let recorderSystem = null;
@@ -19,18 +18,8 @@ async function start() {
     // Check which bots to run
     const botsTwitch  = [];
     const botsDiscord = [];
-    const botsOBS = [];
-    if (settings.obs) for (let i = 0; i < settings.obs.length; i++) { if (settings.obs[i].enabled) { botsOBS.push(i); } }
     for (let i = 0; i < settings.discord.length; i++) { if (settings.discord[i].enabled) { botsDiscord.push(i); } }
     for (let i = 0; i < settings.twitch .length; i++) { if (settings.twitch [i].enabled) { botsTwitch .push(i); } }
-
-    // Run the bots
-    if (botsOBS.length > 0) {
-        log.info(`Starting ${botsOBS.length} OBS bots`, SOURCE);
-        for (let i = 0; i < botsOBS.length; i++) { clientsOBS.push(new ClientOBS(settings.obs[botsOBS[i]])); }
-        clientsOBS.forEach(client => readyPromises.push(new Promise(resolve => client.once('ready', resolve))));
-        for (let i = 0; i < clientsOBS.length; i++) { clientsOBS[i].connect(); }
-    }
     if (botsDiscord.length > 0) {
         log.info(`Starting ${botsDiscord.length} discord bots`, SOURCE);
         for (let i = 0; i < botsDiscord.length; i++) {
@@ -40,7 +29,12 @@ async function start() {
     }
     if (botsTwitch .length > 0) {
         log.info(`Starting ${botsTwitch .length} twitch bots`, SOURCE);
-        for (let i = 0; i < botsTwitch.length; i++) { clientsTwitch.push(new ClientTwitch(settings.twitch[botsTwitch[i]], clientsOBS)); }
+        for (let i = 0; i < botsTwitch.length; i++) {
+            const twitchConfig = settings.twitch[botsTwitch[i]];
+            let obsClient = null;
+            if (twitchConfig.obs && twitchConfig.obs.enabled) { obsClient = new ClientOBS(twitchConfig); }
+            clientsTwitch.push(new ClientTwitch(twitchConfig, obsClient));
+        }
         clientsTwitch.forEach(client => readyPromises.push(new Promise(resolve => client.once('ready', resolve))));
         for (let i = 0; i < clientsTwitch.length; i++) { clientsTwitch[i].connect(); }
     }
@@ -68,7 +62,7 @@ async function start() {
 
 function getTwitchClients() { return clientsTwitch; }
 function getDiscordClients() { return clientsDiscord; }
-function getOBSClients() { return clientsOBS; }
+function getOBSClients() { return clientsTwitch.map(client => client.obsClient).filter(client => client !== null); }
 
 async function gracefulShutdown() {
     log.info('Starting graceful shutdown...', SOURCE);
@@ -76,7 +70,7 @@ async function gracefulShutdown() {
     // Shutdown Twitch clients
     clientsTwitch.forEach(client => { if (client && typeof client.disconnect === 'function') { shutdownPromises.push( client.disconnect().catch(err => log.error(`Error disconnecting Twitch client: ${err}`, SOURCE)) ); } });
     // Shutdown OBS clients
-    clientsOBS.forEach(client => { if (client && typeof client.disconnect === 'function') { shutdownPromises.push( client.disconnect().catch(err => log.error(`Error disconnecting OBS client: ${err}`, SOURCE)) ); } });
+    clientsTwitch.forEach(client => { if (client.obsClient && typeof client.obsClient.disconnect === 'function') { shutdownPromises.push( client.obsClient.disconnect().catch(err => log.error(`Error disconnecting OBS client: ${err}`, SOURCE)) ); } });
     // Shutdown Web Console
     if (webConsole && typeof webConsole.stop === 'function') { shutdownPromises.push( webConsole.stop().catch(err => log.error(`Error stopping web console: ${err}`, SOURCE)) ); }
     // Shutdown Recorder

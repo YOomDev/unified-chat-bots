@@ -93,8 +93,7 @@
               "type": "setTextSource",
               "sceneName": null,
               "sourceName": "Follower-Placeholder",
-              "text": "Welcome {user_name}!",
-              "obsName": "obs.bot.name"
+              "text": "Welcome {user_name}!"
             },
             {
               "type": "setSourceEnabled",
@@ -102,8 +101,7 @@
               "sourceName": "Follower-Placeholder",
               "enabled": true,
               "delay": 1,
-              "duration": 7,
-              "obsName": "obs.bot.name"
+              "duration": 7
             },
             {
               "type": "setSourceEnabled",
@@ -111,8 +109,7 @@
               "sourceName": "Follower-Overlay",
               "enabled": true,
               "delay": 0,
-              "duration": 9,
-              "obsName": "obs.bot.name"
+              "duration": 9
             },
             {
               "type": "setSourceEnabled",
@@ -120,8 +117,7 @@
               "sourceName": "Follower-Sound",
               "enabled": true,
               "delay": 0,
-              "duration": 5,
-              "obsName": "obs.bot.name"
+              "duration": 5
             }
           ]
         },
@@ -132,8 +128,7 @@
               "type": "setTextSource",
               "sceneName": null,
               "sourceName": "Raid-Placeholder",
-              "text": "{user_name} raided with {viewer_count} viewers!",
-              "obsName": "obs.bot.name"
+              "text": "{user_name} raided with {viewer_count} viewers!"
             },
             {
               "type": "setSourceEnabled",
@@ -141,8 +136,7 @@
               "sourceName": "Raid-Placeholder",
               "enabled": true,
               "delay": 1,
-              "duration": 7,
-              "obsName": "obs.bot.name"
+              "duration": 7
             },
             {
               "type": "setSourceEnabled",
@@ -150,8 +144,7 @@
               "sourceName": "Raid-Overlay",
               "enabled": true,
               "delay": 0,
-              "duration": 9,
-              "obsName": "obs.bot.name"
+              "duration": 9
             },
             {
               "type": "setSourceEnabled",
@@ -159,8 +152,7 @@
               "sourceName": "Raid-Sound",
               "enabled": true,
               "delay": 0,
-              "duration": 15,
-              "obsName": "obs.bot.name"
+              "duration": 15
             }
           ]
         },
@@ -173,8 +165,7 @@
               "sourceName": "Ban-Sound",
               "enabled": true,
               "delay": 0,
-              "duration": 5,
-              "obsName": "obs.bot.name"
+              "duration": 5
             }
           ]
         },
@@ -186,8 +177,7 @@
               "sourceName": "{sourceName}",
               "enabled": true,
               "delay": "{delay}",
-              "duration": "{duration}",
-              "obsName": "obs.bot.name"
+              "duration": "{duration}"
             }
           ]
         }
